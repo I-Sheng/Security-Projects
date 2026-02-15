@@ -65,7 +65,11 @@ Adjust the domain names above to match the zones and records configured in your�
 
 Because port 53 is exposed, you can also query the DNS server directly from the host:
 
-`dig @127.0.0.1 example.com dig @127.0.0.1 example.com A dig @127.0.0.1 example.com NS`
+```
+dig @127.0.0.1 example.com 
+dig @127.0.0.1 example.com A
+dig @127.0.0.1 example.com NS
+```
 
 Replace `example.com` with whatever zone you configured.
 
