@@ -38,7 +38,6 @@ docker compose up -d --build
 
 To see running containers:
 
-bash
 
 `docker ps`
 
@@ -48,13 +47,13 @@ You should see `dns-server` and `dns-client` containers.
 
 Attach to the client container:
 
-bash
+
 
 `docker exec -it dns-client /bin/bash`
 
 Inside the client, you can run DNS queries against the server:
 
-bash
+
 
 `# Example using dig dig @172.30.0.2 example.com # Or, if /etc/resolv.conf is configured to use 172.30.0.2, simply: dig example.com nslookup example.com`
 
@@ -64,7 +63,7 @@ Adjust the domain names above to match the zones and records configured in your�
 
 Because port 53 is exposed, you can also query the DNS server directly from the host:
 
-bash
+
 
 `dig @127.0.0.1 example.com dig @127.0.0.1 example.com A dig @127.0.0.1 example.com NS`
 
