@@ -54,16 +54,16 @@ Attach to the client container:
 Inside the client, you can run DNS queries against the server:
 
 
-
-`# Example using dig dig @172.30.0.2 example.com # Or, if /etc/resolv.conf is configured to use 172.30.0.2, simply: dig example.com nslookup example.com`
+```
+# Example using dig
+dig @172.30.0.2 example.com
+```
 
 Adjust the domain names above to match the zones and records configured in your `named` configuration inside the server image.
 
 ## Testing from the Host
 
 Because port 53 is exposed, you can also query the DNS server directly from the host:
-
-
 
 `dig @127.0.0.1 example.com dig @127.0.0.1 example.com A dig @127.0.0.1 example.com NS`
 
