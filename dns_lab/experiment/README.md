@@ -6,9 +6,9 @@
 
 ## Task 1.1: Exploring DNS Queries
 
-![image.png](image.png)
+![image.png](images/image.png)
 
-![image.png](image%201.png)
+![image.png](images/image%201.png)
 
 1. Which DNS servers are contacted during resolution? 
 
@@ -21,7 +21,7 @@
 
 ## Task 2.1: Capturing DNS Traffic
 
-![image.png](image%202.png)
+![image.png](images/image%202.png)
 
 1. Is DNS using TCP or UDP by default? 
     - On the right side, there is a `udp` after the flags, confirming the transport protocol is UDP.
@@ -35,7 +35,7 @@
 
 ## Task 3.1: Query the Local DNS Server
 
-![image.png](image%203.png)
+![image.png](images/image%203.png)
 
 1. Is the response what you would expect? 
     - Yes, the status: `NXDOMAIN` means that the domain we ask for doesn’t exist.
@@ -46,7 +46,7 @@
 
 ## Task 4.1: Testing DNSSEC Validation
 
-![image.png](image%204.png)
+![image.png](images/image%204.png)
 
 1. What happens when DNSSEC validation fails? 
     - A validating resolver will therefore return status: SERVFAIL instead of an A record when DNSSEC validation fails.

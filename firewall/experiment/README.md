@@ -51,9 +51,9 @@ sudo rmmod hello
 dmesg
 ```
 
-![Screenshot 2026-02-13 115304.png](Screenshot_2026-02-13_115304.png)
+![Screenshot 2026-02-13 115304.png](images/Screenshot_2026-02-13_115304.png)
 
-![Screenshot 2026-02-13 115325.png](Screenshot_2026-02-13_115325.png)
+![Screenshot 2026-02-13 115325.png](images/Screenshot_2026-02-13_115325.png)
 
 ## Task 1.B: Implement a Simple Firewall Using `Netfilter`
 
@@ -167,17 +167,17 @@ MODULE_LICENSE("GPL");
 - Using the same method to insert module as `1.A.`
 - Based on the code above, it would show the detect traffic and print out the source and destination IPs and drop the packet forward to 8.8.8.8, which also was verified by the following figure image.
 
-![Screenshot 2026-02-13 135315.png](Screenshot_2026-02-13_135315.png)
+![Screenshot 2026-02-13 135315.png](images/Screenshot_2026-02-13_135315.png)
 
 ### Question 2: Different results with various `hooknum`
 
-![image.png](image.png)
+![image.png](images/image.png)
 
-![image.png](image%201.png)
+![image.png](images/image%201.png)
 
-![image.png](image%202.png)
+![image.png](images/image%202.png)
 
-![image.png](image%203.png)
+![image.png](images/image%203.png)
 
 | Hooknum (IPv4) | Where the packet came from | Where the packet is going next | You see it in your screenshots when… |
 | --- | --- | --- | --- |
@@ -259,7 +259,7 @@ unsigned int blockICMP(void *priv, struct sk_buff *skb,
 
 - block inbound ICMP packets whose destination IP is `10.9.0.1`.
 
-![image.png](image%204.png)
+![image.png](images/image%204.png)
 
 - It work as expected, successfully drop the ICMP and Telnet packets.
 
@@ -276,7 +276,7 @@ iptables -P INPUT DROP ➙Set default rule for INPUT
 
 - The first two lines of code ensure traffic with ICMP protocol are accept, and the last two line set the firewall as default deny.
 
-![Screenshot 2026-02-13 155855.png](Screenshot_2026-02-13_155855.png)
+![Screenshot 2026-02-13 155855.png](images/Screenshot_2026-02-13_155855.png)
 
 - The image show that, we can successfully ping the router, but couldn’t connect with TCP.
 
@@ -308,7 +308,7 @@ iptables -P OUTPUT DROP
 
 ### Result
 
-![image.png](image%205.png)
+![image.png](images/image%205.png)
 
 - On the left side, it’s a external host `10.9.0.5`, which couldn’t ping the internal network like `192.168.60.5` but can ping the router, including `10.9.0.11` and `192.168.60.5`.
 - On the right window, it’s internal host, so it can ping both internal and external hosts. However, it couldn’t use `Telnet` or others protocol except ICMP to connect external hosts.
@@ -329,7 +329,7 @@ iptables -A FORWARD -i eth1 -o eth1 -p tcp -j ACCEPT
 
 - Set based on the rules and explain with comments.
 
-![image.png](image%206.png)
+![image.png](images/image%206.png)
 
 - Initially, I’m at the `10.9.0.5` host, try to connect to internal hosts using TCP telnet. As a result, only `192.168.60.5` successfully connected.
 - Furthermore, I try to connect to external host `10.9.0.5`, which was refused, proved that it can’t connect to external hosts using TCP telnet.
@@ -344,7 +344,7 @@ iptables -A FORWARD -i eth1 -o eth1 -p tcp -j ACCEPT
 - On host (`10.9.0.5`) I ran `ping 192.168.60.5`.
 - On the router I repeatedly ran `conntrack -L` while the ping was in progress.
 
-![image.png](image%207.png)
+![image.png](images/image%207.png)
 
 - It shows a single ICMP entry with `src=10.9.0.5 dst=192.168.60.5 type=8 code=0` (echo‑request) and a matching reverse direction `src=192.168.60.5 dst=10.9.0.5 type=0 code=0` (echo‑reply).
 - This means `conntrack` groups the request and reply as **one ICMP “connection” state**, even though ICMP is connectionless at the protocol level.
@@ -355,7 +355,7 @@ iptables -A FORWARD -i eth1 -o eth1 -p tcp -j ACCEPT
 - On the other host(`192.168.60.5`) I run `nc -lu 9090`.
 - Run `watch -n 1 conntrack -L` in router.
 
-![image.png](image%208.png)
+![image.png](images/image%208.png)
 
 - The first `src/dst/sport/dport` pair is the **client → server** direction (10.9.0.5 → 192.168.60.5, client port → 9090).
 - The second `src/dst/sport/dport` pair is the **server → client** direction (192.168.60.5:9090 → 10.9.0.5:client‑port).
@@ -364,7 +364,7 @@ iptables -A FORWARD -i eth1 -o eth1 -p tcp -j ACCEPT
 
 ### TCP Experiment
 
-![image.png](image%209.png)
+![image.png](images/image%209.png)
 
 - On internal host 192.168.60.5 you started a TCP server: `nc -l 9090`.
 - On outside host 10.9.0.5 you connected with `nc 192.168.60.5 9090` and saw the same text, proving the TCP connection works through the router.
@@ -399,7 +399,7 @@ iptables -A FORWARD -p tcp -m conntrack \
 
 ### Result
 
-![image.png](image%2010.png)
+![image.png](images/image%2010.png)
 
 ### Outside → internal servers
 
@@ -445,13 +445,13 @@ iptables -A FORWARD -s 10.9.0.5 -j DROP
 
 - Stop at one minutes
 
-![image.png](image%2011.png)
+![image.png](images/image%2011.png)
 
 ### With the second rule
 
 - Stop at one minutes
 
-![image.png](image%2012.png)
+![image.png](images/image%2012.png)
 
 ## Observation
 
@@ -497,7 +497,7 @@ iptables -t nat -A PREROUTING -p udp --dport 8080 \
 
 ### Result
 
-![image.png](image%2013.png)
+![image.png](images/image%2013.png)
 
 ## Random
 
@@ -523,7 +523,7 @@ iptables -t nat -A PREROUTING -p udp --dport 8080 \
 
 ### Result
 
-![image.png](image%2014.png)
+![image.png](images/image%2014.png)
 
 ## Summary for Task 5
 

@@ -70,10 +70,6 @@ docker compose down               # stop
 docker compose down --rmi local --volumes && docker compose up -d --build  # full reset
 ```
 
-### Mouse mirroring (Windows only)
-
-Compile `mouse_mirror.c` with a Windows toolchain (MinGW or MSVC) targeting `_WIN32_WINNT 0x0500`. Requires `winuser.h` / `windows.h`.
-
 ## Architecture Notes
 
 - **C sniffers**: All follow the same pattern — open pcap handle on a named interface, compile a BPF filter, register a `got_packet` callback via `pcap_loop`. Spoofing replies use a raw socket with `IP_HDRINCL` and a manual ICMP checksum (`csum()`).

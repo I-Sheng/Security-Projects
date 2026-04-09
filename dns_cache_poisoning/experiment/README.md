@@ -10,7 +10,7 @@ In this lab, we analyze how a local DNS resolver can be attacked using spoofed D
 
 - The local DNS must **forward** queries to a valid upstream resolver.
 
-![image.png](image.png)
+![image.png](images/image.png)
 
 **Action**
 
@@ -29,7 +29,7 @@ options {
 
 **Result**
 
-![image.png](image%201.png)
+![image.png](images/image%201.png)
 
 ## Before Task, Explain code
 
@@ -90,14 +90,14 @@ In Task 1, we attack the **user** directly by sniffing DNS queries for `www.e
 
 **Normal response for `www.example.com` DNS query.**
 
-![image.png](image%202.png)
+![image.png](images/image%202.png)
 
 **Result**
 
 - Since the original name server request is faster than the spoofing DNS packet sent; therefore, we slow down the response time for external network.
 - For this task, we use the default code in `dns_sniff_spoof.py` , since the result we want is just simply change the `ANSWER SECTION`.
 
-![image.png](image%203.png)
+![image.png](images/image%203.png)
 
 From this task I learned how to use `Scapy` to craft a forged DNS answer packet and how network delay can affect whether the spoofed reply is accepted.
 
@@ -123,7 +123,7 @@ cat /var/cache/bind/dump.db
 
 - As a result, we can see that there is cache A record for `www.example.com` which point to the attacker-designed IP address `10.0.2.5`.
 
-![image.png](image%204.png)
+![image.png](images/image%204.png)
 
 This task demonstrates how a single successful spoofed reply can have a longer‑lasting impact than directly spoofing each user query.
 
@@ -154,7 +154,7 @@ In Task 3, we extend the cache poisoning idea by spoofing an NS record for the e
 
 - With the code, I insert a nameserver (NS record) in the DNS cache, so I get `example.com NS ns.attacker32.com`; furthermore, use ADDITION SECTION to point that fake nameserver to the attacker IP address, so we have `ns.attacker32.com. IN A 10.9.0.153`.
 
-![image.png](image%205.png)
+![image.png](images/image%205.png)
 
 This task illustrates how poisoning NS records can give the attacker control over an entire domain, not just a single host.
 
@@ -183,7 +183,7 @@ In Task 4, we try to abuse the Authority section further by including an extra s
 - We get `example.com NS ns.attacker32.com` , just as Task 3.
 - **In our experiment, only the NS record for** `example.com` **was cached, while the additional NS record** `google.com NS ns.attacker32.com` **did not appear in the cache. This indicates that the DNS server validates authority information and does not cache unrelated NS records for other zones (such as** `google.com`**) that are piggy‑backed in a response to a query for** `example.com`**, which mitigates this type of cache‑poisoning attempt.**
 
-![image.png](image%206.png)
+![image.png](images/image%206.png)
 
 From this task, I learned how modern resolvers validate and limit what authority data they cache, which helps mitigate cross‑domain cache poisoning.
 
@@ -231,7 +231,7 @@ www.example.com.	863989	A	10.0.2.5
 
 - However, we didn’t get the cache correlate to `www.facebook.com`, since it’s not related to the query, although it appears in the ADDITION SECTION in the user container output console.
 
-![image.png](image%207.png)
+![image.png](images/image%207.png)
 
 This task helped me understand which types of additional data are eligible for caching and why unrelated “piggy‑backed” records are often ignored, reducing the effectiveness of this style of cache‑poisoning attack.
 

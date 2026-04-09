@@ -4,7 +4,7 @@
 
 ### Get the Network interface
 
-![image.png](image.png)
+![image.png](images/image.png)
 
 ## Task 1.1: Sniffing Packets
 
@@ -20,13 +20,13 @@
 
 **With Root**
 
-![image.png](image%201.png)
+![image.png](images/image%201.png)
 
 With Root, we successfully capture a ICMP packet.
 
 **Without Root**
 
-![image.png](image%202.png)
+![image.png](images/image%202.png)
 
 Without Root, we get an `Operation not permitted` error.
 
@@ -39,7 +39,7 @@ Without Root, we get an `Operation not permitted` error.
         sniff(iface=iface_name, filter="icmp", prn=print_pkt)
         ```
         
-        ![image.png](image%203.png)
+        ![image.png](images/image%203.png)
         
     2. Capture any TCP packet that comes from a particular IP and with a destination port number `23`.
         
@@ -48,7 +48,7 @@ Without Root, we get an `Operation not permitted` error.
         			filter='tcp and host 10.9.0.6 and port 23', prn=print_pkt)
         ```
         
-        ![image.png](image%204.png)
+        ![image.png](images/image%204.png)
         
     3. Capture packets comes from or to go to a particular subnet. You can pick any subnet, such as `128.230.0.0/16`; you should not pick the subnet that your VM is attached to.
         
@@ -57,7 +57,7 @@ Without Root, we get an `Operation not permitted` error.
         			filter='net 142.250.0.0/16', prn=print_pkt)
         ```
         
-        ![image.png](image%205.png)
+        ![image.png](images/image%205.png)
         
 
 ## Task 1.2: Spoofing ICMP Packets
@@ -66,17 +66,17 @@ Without Root, we get an `Operation not permitted` error.
 
 The user successfully spoofed an ICMP echo request from an arbitrary source IP (`10.0.2.3`) to Host B (`10.9.0.6`). Wireshark captured the spoofed request and the subsequent reply sent back to the spoofed IP.
 
-![image.png](image%206.png)
+![image.png](images/image%206.png)
 
 ## Task 1.3: Traceroute
 
 A script was written to send ICMP packets with increasing TTL values (from 2 to 50) to destination `128.119.245.12`. This allows the user to identify routers along the path as they return "Time-to-live exceeded" messages.
 
-![image.png](image%207.png)
+![image.png](images/image%207.png)
 
 ## Task 1.4: Sniffing and-then Spoofing
 
-![image.png](image%208.png)
+![image.png](images/image%208.png)
 
 The script `sniff_and_spoof.py` monitors the network for ICMP echo requests and immediately sends a spoofed echo reply.
 
@@ -111,7 +111,7 @@ fail if it is executed without the root privilege?**
 - Sniffers need **raw access** to link-layer traffic, which is a privileged operation; OSes restrict this so only root (or a capability) can open such capture handles.
 - When you run without root, `pcap_open_live()` (or the underlying raw socket / BPF device open) fails, so the program cannot start capturing packets; that’s where it effectively fails.
 
-![image.png](image%209.png)
+![image.png](images/image%209.png)
 
 ### Question 3.
 
@@ -128,9 +128,9 @@ fail if it is executed without the root privilege?**
 
 ```
 
-![image.png](image%2010.png)
+![image.png](images/image%2010.png)
 
-![image.png](image%2011.png)
+![image.png](images/image%2011.png)
 
 While turning on promiscuous mode, you can monitor host communication  both between hosts in the LAN and one host in the LAN and one outside the network.
 
@@ -149,7 +149,7 @@ char filter_exp[] = "icmp and host 10.9.0.5 and host 10.9.0.6";
 - `ping` from the machine, whose IP was `10.9.0.5`, to the machine, whose IP was `10.9.0.6` to verify the result.
 - Run the `./sniffer_icmp` script in the other machine in the same LAN, whose IP was 10.9.0.1.
 
-![image.png](image%2012.png)
+![image.png](images/image%2012.png)
 
 ### Capture the TCP packets with a destination port number in the range from 10 to 100.
 
@@ -160,7 +160,7 @@ char filter_exp[] = "tcp and dst portrange 10-100";
 - Use `crul` to get the content from webpage to verify the tcp connection.
 - Run the `./sniffer_tcp` script in the other machine in the same LAN, whose IP was 10.9.0.1.
 
-![image.png](image%2013.png)
+![image.png](images/image%2013.png)
 
 ## Task 2.1C: Sniffing Passwords.
 
@@ -172,7 +172,7 @@ char filter_exp[] = "tcp and dst portrange 10-100";
 char filter_exp[] = "tcp and port 23";
 ```
 
-![Screenshot 2026-01-28 150539.png](Screenshot_2026-01-28_150539.png)
+![Screenshot 2026-01-28 150539.png](images/Screenshot_2026-01-28_150539.png)
 
 ## Task 2.2: Spoofing
 
@@ -180,11 +180,11 @@ char filter_exp[] = "tcp and port 23";
 
 The left side of the image shows the program being executed several times with different spoofed source and destination addresses (for example, from `6.6.6.6` to `10.9.0.6`, from `6.6.6.6` to `1.2.3.4`, and from `7.7.7.7` to `10.9.0.6`), each time printing a confirmation that a spoofed ICMP echo request was sent. On the right side, the Wireshark capture window confirms that these packets were actually placed on the wire: the ICMP entries list the forged source IPs (such as `6.6.6.6` and `7.7.7.7`) and the chosen destinations, and they are marked as Echo (ping) request or reply frames, demonstrating that the victim hosts received and responded to packets whose apparent source is not the real sender.
 
-![image.png](image%2014.png)
+![image.png](images/image%2014.png)
 
 ### Task 2.2B: Spoof an ICMP Echo Request.
 
-![image.png](image%2015.png)
+![image.png](images/image%2015.png)
 
 ### Question 4.
 
@@ -193,7 +193,7 @@ actual packet is?**
 
 - The user tested setting an arbitrary `ip_len` (e.g., 75 in a 55-byte packet). Wireshark showed the packet was still sent, and the total length were the same, which means it were recomputed.
 
-![image.png](image%2016.png)
+![image.png](images/image%2016.png)
 
 ### Question 5.
 
@@ -209,14 +209,14 @@ iph->ip_sum = csum((unsigned short *)iph, ip_header_len);
 iph->ip_sum = htons(0x0000);
 ```
 
-![image.png](image%2017.png)
+![image.png](images/image%2017.png)
 
 ### Question 6.
 
 **Why do you need the root privilege to run the programs that use raw sockets? Where
 does the program fail if executed without the root privilege?**
 
-![image.png](image%2018.png)
+![image.png](images/image%2018.png)
 
 - Running the C spoofing program without root results in `socket() error: Operation not permitted`, as creating `SOCK_RAW` requires elevated privileges.
 - Since we need to use `socket()` to establish the connection, which require a root privilege.
@@ -225,6 +225,6 @@ does the program fail if executed without the root privilege?**
 
 The C implementation of the sniff-and-then-spoof program demonstrated the ability to capture a request from `10.9.0.5` and immediately send a spoofed reply. When pinging an existing remote host (8.8.8.8) while the script was running, the sender received duplicate (DUP) replies—one from the actual host and one from the spoofing script.
 
-![image.png](image%2019.png)
+![image.png](images/image%2019.png)
 
-![image.png](image%2020.png)
+![image.png](images/image%2020.png)
