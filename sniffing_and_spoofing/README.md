@@ -1,52 +1,53 @@
 # Sniffing and Spoofing
 
-This module contains tools and lab experiments for packet sniffing and ICMP/TCP spoofing, implemented in both Python (Scapy) and C (libpcap + raw sockets).
+This module implements packet sniffing and ICMP/TCP spoofing in both Python (Scapy) and C (libpcap + raw sockets). The goal is to understand how these two fundamental network threats work at the implementation level, not just as tools.
+
+> **Source:** SEED Labs — Packet Sniffing and Spoofing Lab (Wenliang Du, 2006–2020)
 
 ## Overview
 
 - **Python tools** (`sniffer.py`, `sniff_and_spoof.py`, `spoof.py`, `traceroute.py`) — thin wrappers around Scapy's `sniff()` and `send()`.
-- **C tools** (`sniffer.c`, `sniffer_icmp.c`, `sniffer_tcp.c`, `sniffer_telnet.c`, `sniff_spoof.c`, `spoof_icmp.c`, `spoof_length.c`, `q5_exp.c`) — use `libpcap` for capture and raw `SOCK_RAW` sockets for spoofing; all follow the same pattern of opening a pcap handle, compiling a BPF filter, and registering a callback via `pcap_loop`.
+- **C tools** (`sniffer.c`, `sniffer_icmp.c`, `sniffer_tcp.c`, `sniffer_telnet.c`, `sniff_spoof.c`, `spoof_icmp.c`, `spoof_length.c`, `q5_exp.c`) — use `libpcap` for capture and raw `SOCK_RAW` sockets for spoofing.
 
 ## Prerequisites
 
-- `libpcap` (install via `apt install libpcap-dev`)
+- `libpcap` (`apt install libpcap-dev`)
 - Python 3 with `scapy` (`pip install scapy`)
 - Root / `sudo` privileges (required for raw socket and pcap access)
+
+## Lab Environment
+
+Three containers on a shared `10.9.0.0/24` LAN:
+
+| Host | IP | Role |
+|---|---|---|
+| Attacker | `10.9.0.1` | Runs sniffers and spoofers (host network mode) |
+| Host A | `10.9.0.5` | User machine |
+| Host B | `10.9.0.6` | User machine |
+
+The attacker container uses `network_mode: host` so it can see all LAN traffic — not just its own. The interface name is the Docker bridge: find it with `ifconfig` and look for the address `10.9.0.1` (typically `br-<network-id>`).
+
+```bash
+docker-compose up -d       # start lab containers
+docker ps                  # list running containers
+docker exec -it <id> bash  # open shell on a container
+```
 
 ## Build
 
 Each C file compiles independently:
 
 ```bash
-gcc -o sniffer sniffer.c -lpcap
-gcc -o sniffer_icmp sniffer_icmp.c -lpcap
-gcc -o sniffer_tcp sniffer_tcp.c -lpcap
+gcc -o sniffer       sniffer.c       -lpcap
+gcc -o sniffer_icmp  sniffer_icmp.c  -lpcap
+gcc -o sniffer_tcp   sniffer_tcp.c   -lpcap
 gcc -o sniffer_telnet sniffer_telnet.c -lpcap
-gcc -o sniff_spoof sniff_spoof.c -lpcap
-gcc -o spoof_icmp spoof_icmp.c -lpcap
-gcc -o spoof_length spoof_length.c -lpcap
+gcc -o sniff_spoof   sniff_spoof.c   -lpcap
+gcc -o spoof_icmp    spoof_icmp.c    -lpcap
+gcc -o spoof_length  spoof_length.c  -lpcap
 ```
 
 Pre-compiled binaries are included alongside their `.c` sources (no file extension).
-
-## Usage
-
-```bash
-# Python sniffers/spoofers (requires root)
-sudo python3 sniffer.py
-sudo python3 spoof.py
-sudo python3 sniff_and_spoof.py
-sudo python3 traceroute.py
-
-# C sniffer/spoofer (requires root; supply your network interface)
-sudo ./sniff_spoof <iface>          # e.g. br-xxxx for a Docker bridge network
-sudo ./sniffer_icmp <iface>
-```
-
-To find the right interface name:
-```bash
-ip a        # list all interfaces
-```
 
 ## Architecture
 
@@ -61,123 +62,85 @@ Open a raw socket with `IP_HDRINCL`, manually construct IP + ICMP headers, compu
 
 ---
 
-## Lab Experiments
+## Task Set 1 — Using Scapy
 
-The `experiment/` folder contains detailed lab notes and screenshots from hands-on exercises.
+### Task 1.1 — Sniffing Packets
 
-### Set 1 — Using Scapy
+The objective is to use Scapy's `sniff()` to capture packets in Python. A basic sniffer:
 
-#### Task 1.1 — Sniffing Packets
+```python
+#!/usr/bin/env python3
+from scapy.all import *
 
-Root privileges are required because sniffers need raw link-layer access. Without root, Scapy raises `PermissionError: [Errno 1] Operation not permitted`.
+def print_pkt(pkt):
+    pkt.show()
 
-BPF filters demonstrated:
-- `filter='icmp'` — capture ICMP only.
-- `filter='tcp and host 10.9.0.6 and port 23'` — TCP from a specific host to port 23.
-- `filter='net 142.250.0.0/16'` — traffic to or from a specific subnet.
+pkt = sniff(iface='br-c93733e9f913', filter='icmp', prn=print_pkt)
+```
 
-#### Task 1.2 — Spoofing ICMP Packets
+**Task 1.1A** — Run the sniffer with root privilege, then again without it.
 
-A spoofed ICMP echo request was crafted with an arbitrary source IP (`10.0.2.3`) and sent to a target host. Wireshark confirmed the spoofed request arrived and the target replied to the forged source.
+```bash
+chmod a+x sniffer.py
+sudo ./sniffer.py        # as root
+su seed && ./sniffer.py  # without root
+```
 
-#### Task 1.3 — Traceroute
+*Observation:* Root is required because sniffers need raw link-layer access. Without it, Scapy raises `PermissionError: [Errno 1] Operation not permitted`.
 
-A script sends ICMP packets with TTL values from 2 to 50 toward a destination (`128.119.245.12`). Each router along the path returns a "Time Exceeded" message, revealing the hop-by-hop route.
+**Task 1.1B** — Set each BPF filter separately and demonstrate the results:
 
-#### Task 1.4 — Sniff-and-Spoof
-
-`sniff_and_spoof.py` monitors the network for ICMP echo requests and immediately replies with a forged echo reply. Key observations:
-- Remote IPs (e.g., `1.2.3.4`, `8.8.8.8`) receive the forged reply successfully.
-- A non-existent LAN host (e.g., `10.9.0.99`) receives no reply because ARP resolution fails — no packet reaches the sniffer in the first place.
-
----
-
-### Set 2 — C / libpcap
-
-#### Task 2.1A — Understanding the Sniffer Library Calls
-
-The essential call sequence:
-1. `pcap_open_live()` — connect to the interface.
-2. `pcap_compile()` — convert a filter string to BPF pseudo-code.
-3. `pcap_setfilter()` — apply the compiled filter.
-4. `pcap_loop()` — enter the capture loop with a callback.
-5. `pcap_close()` — clean up.
-
-Without root, `pcap_open_live()` fails immediately with a permissions error.
-
-**Promiscuous mode** (`pcap_open_live(..., 1, ...)`) allows capturing all frames on the wire, not just those addressed to the host. With it off, only frames destined for the local MAC are captured.
-
-#### Task 2.1B — BPF Filters in C
-
-| Goal | Filter expression |
-|---|---|
-| ICMP between two specific hosts | `icmp and host 10.9.0.5 and host 10.9.0.6` |
-| TCP with destination port 10–100 | `tcp and dst portrange 10-100` |
-
-#### Task 2.1C — Sniffing Telnet Passwords
-
-Telnet sends data in plaintext over TCP port 23. Using the filter `tcp and port 23` and printing the data payload of each captured packet, the cleartext password typed by the user is visible in the captured traffic.
-
-#### Task 2.2 — Spoofing with Raw Sockets
-
-A C program opens a `SOCK_RAW` socket (`IPPROTO_RAW`) with `IP_HDRINCL` and manually populates the IP and ICMP headers. Findings:
-
-- **IP length field:** The kernel recomputes `ip_len` — setting an arbitrary value is overridden on send.
-- **IP checksum:** Setting `ip_sum = 0` still results in a valid packet because the kernel recalculates it.
-- **Root requirement:** `socket(AF_INET, SOCK_RAW, ...)` fails with `Operation not permitted` without root.
-
-#### Task 2.3 — Sniff-and-Spoof in C
-
-The C implementation captures an ICMP echo request and immediately sends a spoofed echo reply. When pinging a real host (e.g., `8.8.8.8`) while the program runs, the sender receives duplicate (DUP) replies — one real and one forged — visible in `ping` output.
+1. `filter='icmp'` — capture ICMP packets only.
+2. `filter='tcp and host 10.9.0.6 and port 23'` — TCP from a specific host to port 23.
+3. `filter='net 128.230.0.0/16'` — packets to/from a subnet (do not use the VM's own subnet).
 
 ---
 
-## Original Assignment
+### Task 1.2 — Spoofing ICMP Packets
 
-> Source: *SEED Labs — Packet Sniffing and Spoofing Lab* (Wenliang Du)
+Scapy lets you set any field of an IP packet to an arbitrary value. Spoof an ICMP echo request with a fake source IP and send it to a host on the same network. Use Wireshark to confirm the receiver accepts the packet and replies to the spoofed source.
 
-### Lab Environment
+```python
+from scapy.all import *
+a = IP()
+a.dst = '10.9.0.5'
+a.src = '10.0.2.3'   # arbitrary spoofed source
+b = ICMP()
+send(a / b)
+```
 
-Three containers on a shared `10.9.0.0/24` LAN:
-
-| Host | IP |
-|---|---|
-| Attacker | `10.9.0.1` |
-| Host A | `10.9.0.5` |
-| Host B | `10.9.0.6` |
-
-The attacker container runs in **host network mode** so it can see all LAN traffic.
+*Observation:* The target replied to the forged source IP, confirming the spoofed request was accepted.
 
 ---
 
-### Task Set 1 — Using Scapy
+### Task 1.3 — Traceroute
 
-#### Task 1.1A — Sniffing with and without Root
+Write a script that sends ICMP packets with increasing TTL (from 1 upward) toward a destination, recording the IP of each router that returns a "Time Exceeded" message.
 
-Run the provided sniffer program with root privilege, then again without it.
+```python
+from scapy.all import *
+dst = '128.119.245.12'
+for ttl in range(1, 50):
+    pkt = IP(dst=dst, ttl=ttl) / ICMP()
+    reply = sr1(pkt, timeout=1, verbose=0)
+    if reply is None:
+        print(f"{ttl}: *")
+    elif reply.type == 11:
+        print(f"{ttl}: {reply.src}")
+    else:
+        print(f"{ttl}: {reply.src} (destination reached)")
+        break
+```
 
-- Demonstrate that you can capture packets as root.
-- Describe and explain what happens when you run without root privilege.
+*Observation:* Each router along the path returned a Time Exceeded message, revealing the hop-by-hop route to the destination.
 
-#### Task 1.1B — BPF Filters
+---
 
-Set each of the following filters separately and demonstrate the results:
+### Task 1.4 — Sniff-and-Spoof
 
-1. Capture only ICMP packets.
-2. Capture any TCP packet from a particular IP with destination port `23`.
-3. Capture packets from/to a subnet such as `128.230.0.0/16` (do not pick the VM's own subnet).
+Write a program that monitors ICMP echo requests and immediately sends a spoofed echo reply for every request it sees — making even non-existent hosts appear alive.
 
-#### Task 1.2 — Spoofing ICMP Packets
-
-Spoof an ICMP echo request packet with an arbitrary source IP address and send it to another machine on the same network. Use Wireshark to confirm the receiver accepts the packet and sends a reply to the spoofed source.
-
-#### Task 1.3 — Traceroute
-
-Write a Scapy program that sends ICMP packets with increasing TTL values to estimate the number of routers between your VM and a chosen destination. Record the IP address of each hop.
-
-#### Task 1.4 — Sniff-and-then-Spoof
-
-Write a program that sniffs ICMP echo requests and immediately sends a spoofed echo reply, making every host appear alive. Ping the following three addresses from the user container and explain each result:
+Ping each address from the user container and explain the results:
 
 ```bash
 ping 1.2.3.4    # non-existing host on the Internet
@@ -185,45 +148,83 @@ ping 10.9.0.99  # non-existing host on the LAN
 ping 8.8.8.8    # existing host on the Internet
 ```
 
-> **Hint:** Understanding ARP is required to explain the LAN result. Use `ip route get 1.2.3.4` to inspect routing.
+*Observations:*
+- `1.2.3.4` (remote, non-existing): the forged reply is received successfully — ping gets a response.
+- `10.9.0.99` (LAN, non-existing): no reply, because ARP resolution fails. Before any ICMP packet is sent, the kernel broadcasts an ARP request to find the MAC address of `10.9.0.99`. Since the host doesn't exist, ARP gets no reply and the ICMP packet is never sent — the sniffer never sees it.
+- `8.8.8.8` (remote, existing): both a real reply and a forged reply arrive — ping reports `DUP!` on the duplicate.
+
+> **Hint:** Use `ip route get 1.2.3.4` to understand routing decisions.
 
 ---
 
-### Task Set 2 — C / libpcap & Raw Sockets
+## Task Set 2 — C / libpcap and Raw Sockets
 
-#### Task 2.1A — Understanding the Sniffer
+### Task 2.1A — Understanding the Sniffer Library Calls
 
-Write a C sniffer that prints source and destination IP addresses for each captured packet. Answer:
+Write a C sniffer that prints source and destination IPs for each captured packet.
 
-- **Q1.** Describe the essential sequence of library calls for a sniffer program.
-- **Q2.** Why does a sniffer require root privilege? At which call does it fail without root?
-- **Q3.** Demonstrate the difference between promiscuous mode on (`pcap_open_live(..., 1, ...)`) and off (`0`). Use `ip -d link show dev <iface>` to verify the `promiscuity` value.
+**Q1.** What is the essential sequence of library calls?
+1. `pcap_open_live()` — connect to the interface.
+2. `pcap_compile()` — convert a BPF filter string to pseudo-code.
+3. `pcap_setfilter()` — apply the compiled filter.
+4. `pcap_loop()` — enter the capture loop, invoking the callback per packet.
+5. `pcap_close()` — clean up.
 
-#### Task 2.1B — Writing Filters
+**Q2.** Why does the sniffer require root? At which call does it fail?  
+`pcap_open_live()` fails immediately with a permissions error if run without root, because opening a raw socket on a network interface requires elevated privileges.
 
-Write BPF filter expressions and include screenshots for:
+**Q3.** Demonstrate the difference between promiscuous mode on (`pcap_open_live(..., 1, ...)`) and off (`0`).  
+Promiscuous mode allows capturing all frames on the wire, not just those addressed to the host's MAC. Verify with `ip -d link show dev <iface>` — look for `promiscuity 1`.
 
-1. ICMP packets between two specific hosts.
-2. TCP packets with a destination port in the range 10–100.
+---
 
-#### Task 2.1C — Sniffing Telnet Passwords
+### Task 2.1B — Writing Filters
 
-Modify your sniffer to print the data payload of captured TCP packets. Demonstrate that you can capture a Telnet password (filter: `tcp and port 23`).
+Write BPF filter expressions and demonstrate each:
 
-#### Task 2.2A — Write a Spoofing Program
+| Goal | Filter expression |
+|---|---|
+| ICMP between two specific hosts | `icmp and host 10.9.0.5 and host 10.9.0.6` |
+| TCP with destination port 10–100 | `tcp and dst portrange 10-100` |
 
-Write a raw-socket C program that sends spoofed IP packets. Provide Wireshark evidence that the packets are transmitted successfully.
+---
 
-#### Task 2.2B — Spoof an ICMP Echo Request
+### Task 2.1C — Sniffing Telnet Passwords
 
-Spoof an ICMP echo request from another machine's IP address to a live host on the Internet. Capture the echo reply in Wireshark to confirm success.
+Modify your sniffer to print the data payload of captured TCP packets. Use the filter `tcp and port 23`.
 
-**Additional Questions:**
+*Observation:* Telnet sends data in plaintext. Each keystroke appears as a small payload in the captured packets, revealing the cleartext password typed by the user.
 
-- **Q4.** Can you set the IP packet length field to an arbitrary value regardless of the actual packet size?
-- **Q5.** Do you need to manually calculate the IP header checksum when using raw sockets?
-- **Q6.** Why does using raw sockets require root? Where does the program fail without it?
+---
 
-#### Task 2.3 — Sniff-and-then-Spoof in C
+### Task 2.2 — Spoofing with Raw Sockets
 
-Re-implement the sniff-and-then-spoof logic in C using `libpcap` and raw sockets. When pinging a real host (e.g., `8.8.8.8`) while the program runs, demonstrate that the sender receives duplicate (DUP) replies — one real and one forged.
+Write a C program that opens a `SOCK_RAW` socket (`IPPROTO_RAW`) with `IP_HDRINCL` and manually fills in the IP and ICMP headers.
+
+**Task 2.2A** — Provide Wireshark evidence that the spoofed packet is transmitted.
+
+**Task 2.2B** — Spoof an ICMP echo request from another machine's IP to a live Internet host. Capture the echo reply in Wireshark to confirm success.
+
+**Q4.** Can you set the IP length field to an arbitrary value regardless of actual packet size?  
+No — the kernel overrides `ip_len` on send.
+
+**Q5.** Do you need to manually calculate the IP checksum?  
+No — setting `ip_sum = 0` still results in a valid packet; the kernel recomputes it automatically.
+
+**Q6.** Why does using raw sockets require root?  
+`socket(AF_INET, SOCK_RAW, ...)` fails with `Operation not permitted` without root.
+
+---
+
+### Task 2.3 — Sniff-and-Spoof in C
+
+Re-implement the sniff-and-spoof logic in C using `libpcap` and raw sockets. When pinging a real host (e.g., `8.8.8.8`) while the program runs, the sender should receive duplicate (DUP) replies — one real and one forged.
+
+*Observation:* The `ping` output shows `DUP!` on forged replies, confirming the C implementation successfully races a spoofed reply before or alongside the legitimate response.
+
+---
+
+## Reference Files
+
+- `experiment/` — Lab screenshots and notes from all tasks above.
+- `local/` — Original lab sheet PDF (`Sniffing_Spoofing.pdf`).
