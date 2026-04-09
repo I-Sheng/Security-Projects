@@ -1,82 +1,148 @@
-- DNS Lab with Docker Compose This lab provides a simple DNS server and DNS client running in a custom Docker network so you can practice DNS configuration and query analysis.
+# DNS Lab
+
+A Dockerized DNS lab with a BIND server and an interactive client on an isolated bridge network. Use it to explore DNS resolution, traffic analysis, DNSSEC validation, and security concepts.
 
 ## Prerequisites
 
-- Docker installed and running on your machine. - Docker Compose (v2 or compatible with `version: "3.8"`).
-- Clone this repository and switch to the `dns_lab` directory:
+- Docker and Docker Compose (v2 / `version: "3.8"` compatible)
 
-```
-git clone https://github.com/I-Sheng/security-code.git cd security-code/dns_lab
+```bash
+git clone https://github.com/I-Sheng/security-code.git
+cd security-code/dns_lab
 ```
 
 ## Files
 
-- `docker-compose.yaml`: Defines `dns-server` and `dns-client` services and the `dns-net` bridge network (subnet `172.30.0.0/24`).
-- `Dockerfile.dns`: Build context for the DNS server container (runs `named`).
-- `Dockerfile.client`: Build context for the DNS client container (interactive Bash environment with DNS tools).
+| File | Description |
+|---|---|
+| `docker-compose.yaml` | Defines `dns-server` and `dns-client` services and the `dns-net` bridge (`172.30.0.0/24`) |
+| `Dockerfile.dns` | DNS server image — runs BIND (`named`) |
+| `Dockerfile.client` | DNS client image — interactive Bash shell with `dig`, `tcpdump`, etc. |
 
 ## Network and Services
 
-- Network: `dns-net` (bridge), subnet `172.30.0.0/24`.
-- `dns-server`:
-    - IP: `172.30.0.2` (on `dns-net`).
-    - Ports exposed: `53/udp`, `53/tcp` mapped to host.
-    - Command: `/usr/sbin/named -f -g`.
-- `dns-client`:
-    - IP: `172.30.0.3` (on `dns-net`).
-    - DNS resolver: points to `172.30.0.2` (the `dns-server` container).
-    - Starts with `/bin/bash` and has TTY enabled for interactive use.
+| Container | IP | Role |
+|---|---|---|
+| `dns-server` | `172.30.0.2` | BIND resolver; ports `53/udp` and `53/tcp` exposed to host |
+| `dns-client` | `172.30.0.3` | Interactive client; resolver configured to `172.30.0.2` |
 
 ## Build and Run
 
-From the `dns_lab` directory:
-
 ```bash
-# Build and start containers in the background
+# Build and start in the background
 docker compose up -d --build
+
+# Verify containers are running
+docker ps
 ```
-
-To see running containers:
-
-
-`docker ps`
-
-You should see `dns-server` and `dns-client` containers.
 
 ## Using the DNS Client
 
-Attach to the client container:
+```bash
+docker exec -it dns-client /bin/bash
 
-
-
-`docker exec -it dns-client /bin/bash`
-
-Inside the client, you can run DNS queries against the server:
-
-
-```
-# Example using dig
+# Inside the client:
 dig @172.30.0.2 example.com
+dig @172.30.0.2 example.com A
+dig @172.30.0.2 example.com NS
 ```
-
-Adjust the domain names above to match the zones and records configured in your `named` configuration inside the server image.
 
 ## Testing from the Host
 
-Because port 53 is exposed, you can also query the DNS server directly from the host:
+Because port 53 is exposed, you can query the server directly from your machine:
 
-```
-dig @127.0.0.1 example.com 
+```bash
+dig @127.0.0.1 example.com
 dig @127.0.0.1 example.com A
 dig @127.0.0.1 example.com NS
 ```
 
-Replace `example.com` with whatever zone you configured.
-
 ## Stopping and Cleaning Up
 
-To stop the lab:
-`docker compose down`
+```bash
+# Stop containers
+docker compose down
 
-To remove containers and rebuild from scratch (if needed):
-`docker compose down --rmi local --volumes docker compose up -d --build`
+# Full reset (remove images and volumes, then rebuild)
+docker compose down --rmi local --volumes && docker compose up -d --build
+```
+
+---
+
+## Lab Experiments
+
+The `experiment/` folder contains screenshots and notes from the hands-on tasks below.
+
+### Task 1.1 — Exploring DNS Queries
+
+Run `dig` with the `+trace` flag to follow the full resolution path for a domain:
+
+```bash
+dig +trace example.com
+```
+
+**Observed resolution chain:** local resolver (`172.30.0.2`) → root servers (e.g., `c.root-servers.net`) → TLD servers (e.g., `l.gtld-servers.net`) → authoritative nameserver.
+
+Key questions answered:
+- **What is returned?** Resource records containing: queried name, type (A, NS, etc.), class, TTL, and the resolved value (IP address or nameserver name).
+- **Where can an attacker interfere?** DNS uses UDP without authentication, so any hop in the chain can be targeted for spoofing or cache poisoning.
+
+---
+
+### Task 2.1 — Capturing DNS Traffic
+
+Capture DNS traffic with `tcpdump` or Wireshark while running `dig`:
+
+```bash
+tcpdump -i eth0 udp port 53
+```
+
+**Key findings:**
+- DNS uses **UDP** by default (confirmed by the `udp` flag in captured packets).
+- DNS packets contain: a HEADER (opcode, status, ID, flags, record counts), an OPT PSEUDOSECTION (EDNS, cookie), a QUESTION SECTION, and an ANSWER SECTION (name, type, IP).
+- **Vulnerability:** The resolver responds to any source IP without verifying whether the requester is who it claims to be, making it susceptible to spoofing.
+
+---
+
+### Task 3.1 — Querying the Local DNS Server
+
+Query a non-existent domain to observe resolver behavior:
+
+```bash
+dig @172.30.0.2 nonexistent.local
+```
+
+**Expected result:** `status: NXDOMAIN` — the domain does not exist.
+
+**Why recursive resolution is risky when misconfigured:** An open or weakly protected recursive resolver can be abused as a pivot for cache poisoning, a DDoS amplifier (DNS reflection), and a channel for leaking internal hostnames.
+
+**What cache poisoning breaks:** The implicit trust that a recursive resolver's cache accurately reflects the DNS hierarchy.
+
+---
+
+### Task 4.1 — Testing DNSSEC Validation
+
+Query a DNSSEC-signed domain and observe the `ad` (Authenticated Data) flag:
+
+```bash
+dig @172.30.0.2 +dnssec sigok.verteiltesysteme.net
+```
+
+**What happens on validation failure:** A validating resolver returns `status: SERVFAIL` instead of the A record.
+
+**How DNSSEC changes the trust model:** Each DNS record is signed with an RRSIG record. The resolver verifies the signature chain up to the root, adding cryptographic authentication on top of the hierarchical DNS protocol.
+
+**Attacks DNSSEC prevents:** DNS response forgery and cache poisoning — an attacker cannot inject fake records because they cannot forge the cryptographic signatures.
+
+---
+
+## Reflection Questions
+
+**Why is DNS an attractive target?**  
+DNS uses UDP (connectionless, no handshake), carries no authentication by default, and is used by virtually every internet connection. Compromising it can silently redirect users to malicious infrastructure at scale.
+
+**Why is DNS security often overlooked?**  
+DNS is treated as basic infrastructure that "just works." Designers focus on securing application layers while delegating DNS to default ISP or cloud resolvers, overlooking misconfiguration risks like open recursion, missing DNSSEC, and insufficient logging.
+
+**Would you recommend running an in-house DNS server for an enterprise?**  
+Generally no — unless the team has strong networking and security expertise to handle patching, monitoring, and hardening (DNSSEC, query logging, rate limiting). The attack surface and operational overhead usually outweigh the benefits over using a well-managed external or dedicated DNS provider.
