@@ -204,8 +204,3 @@ The rule matches UDP packets to port 53 whose payload contains the DNS-encoded r
 | `reference` | Link to CVE or external advisory |
 
 ---
-
-## Reference Files
-
-- `experiment/` — Lab screenshots and alert output from all tasks above.
-- `local/` — Course lab sheet (`Lab3_snort.pdf`) and quick-reference cheatsheet (`Snort_Cheatsheet_-_TryHackMe.pdf`).

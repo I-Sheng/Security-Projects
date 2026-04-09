@@ -88,8 +88,3 @@ This simulation is effective in a controlled lab environment. Real-world DDoS de
 - **Rate limiting** — firewalls and routers cap packet rates per source or destination.
 - **Traffic scrubbing / CDN protection** — services like Cloudflare absorb volumetric floods before they reach the origin.
 - **Anycast routing** — distributes attack traffic across many PoPs, diluting its impact.
-
-## Reference Files
-
-- `Makefile` — Defines all attack and hiding targets.
-- `fail_spoof` — Script artifact from a spoofing experiment.

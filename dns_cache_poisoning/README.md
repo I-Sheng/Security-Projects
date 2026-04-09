@@ -196,8 +196,3 @@ The `www.facebook.com` record is **not** cached.
 Direct spoofing affects a single query but requires winning the race every time. Cache poisoning has lasting impact because the forged records persist until TTL expiry and affect all users of the resolver. However, modern resolvers enforce bailiwick rules — authority and glue records are only cached for zones directly related to the queried name — which limits cross-domain poisoning attempts.
 
 ---
-
-## Reference Files
-
-- `experiment/` — Lab screenshots and notes from all tasks above.
-- `local/` — Original SEED lab sheet PDF.

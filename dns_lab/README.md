@@ -173,8 +173,3 @@ DNS is treated as basic infrastructure that "just works." Designers focus on sec
 Generally no — unless the team has strong networking and security expertise to handle patching, monitoring, and hardening (DNSSEC, query logging, rate limiting). The attack surface and operational overhead usually outweigh the benefits over using a well-managed external or dedicated DNS provider.
 
 ---
-
-## Reference Files
-
-- `experiment/` — Lab screenshots and notes from all tasks above.
-- `local/` — Original lab sheet PDF (`Lab4_DNS_Security.pdf`).

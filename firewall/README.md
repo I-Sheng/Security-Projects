@@ -307,8 +307,3 @@ Send 50 test packets and report the distribution from both modes. Explain how th
 *Observation:* With only 50 test packets the observed distribution deviates from a perfect 1/3 split due to small sample size and UDP's unreliability. The `nth` mode gives strictly deterministic alternation; the `random` mode converges to the target probability only with large sample sizes.
 
 ---
-
-## Reference Files
-
-- `experiment/` — Lab screenshots and notes from all tasks above.
-- `local/` — Original SEED lab sheet PDF (`Firewall.pdf`).

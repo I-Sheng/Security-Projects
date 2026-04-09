@@ -223,8 +223,3 @@ Re-implement the sniff-and-spoof logic in C using `libpcap` and raw sockets. Whe
 *Observation:* The `ping` output shows `DUP!` on forged replies, confirming the C implementation successfully races a spoofed reply before or alongside the legitimate response.
 
 ---
-
-## Reference Files
-
-- `experiment/` — Lab screenshots and notes from all tasks above.
-- `local/` — Original lab sheet PDF (`Sniffing_Spoofing.pdf`).
