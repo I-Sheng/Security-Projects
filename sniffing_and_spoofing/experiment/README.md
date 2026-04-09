@@ -80,8 +80,6 @@ A script was written to send ICMP packets with increasing TTL values (from 2 to 
 
 The script `sniff_and_spoof.py` monitors the network for ICMP echo requests and immediately sends a spoofed echo reply.
 
-+1
-
 - **Observations:**
     - **1.2.3.4 (Remote):** Received a forged reply.
     - **8.8.8.8 (Remote):** Received a forged reply.
