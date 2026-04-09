@@ -129,3 +129,101 @@ A C program opens a `SOCK_RAW` socket (`IPPROTO_RAW`) with `IP_HDRINCL` and manu
 #### Task 2.3 — Sniff-and-Spoof in C
 
 The C implementation captures an ICMP echo request and immediately sends a spoofed echo reply. When pinging a real host (e.g., `8.8.8.8`) while the program runs, the sender receives duplicate (DUP) replies — one real and one forged — visible in `ping` output.
+
+---
+
+## Original Assignment
+
+> Source: *SEED Labs — Packet Sniffing and Spoofing Lab* (Wenliang Du)
+
+### Lab Environment
+
+Three containers on a shared `10.9.0.0/24` LAN:
+
+| Host | IP |
+|---|---|
+| Attacker | `10.9.0.1` |
+| Host A | `10.9.0.5` |
+| Host B | `10.9.0.6` |
+
+The attacker container runs in **host network mode** so it can see all LAN traffic.
+
+---
+
+### Task Set 1 — Using Scapy
+
+#### Task 1.1A — Sniffing with and without Root
+
+Run the provided sniffer program with root privilege, then again without it.
+
+- Demonstrate that you can capture packets as root.
+- Describe and explain what happens when you run without root privilege.
+
+#### Task 1.1B — BPF Filters
+
+Set each of the following filters separately and demonstrate the results:
+
+1. Capture only ICMP packets.
+2. Capture any TCP packet from a particular IP with destination port `23`.
+3. Capture packets from/to a subnet such as `128.230.0.0/16` (do not pick the VM's own subnet).
+
+#### Task 1.2 — Spoofing ICMP Packets
+
+Spoof an ICMP echo request packet with an arbitrary source IP address and send it to another machine on the same network. Use Wireshark to confirm the receiver accepts the packet and sends a reply to the spoofed source.
+
+#### Task 1.3 — Traceroute
+
+Write a Scapy program that sends ICMP packets with increasing TTL values to estimate the number of routers between your VM and a chosen destination. Record the IP address of each hop.
+
+#### Task 1.4 — Sniff-and-then-Spoof
+
+Write a program that sniffs ICMP echo requests and immediately sends a spoofed echo reply, making every host appear alive. Ping the following three addresses from the user container and explain each result:
+
+```bash
+ping 1.2.3.4    # non-existing host on the Internet
+ping 10.9.0.99  # non-existing host on the LAN
+ping 8.8.8.8    # existing host on the Internet
+```
+
+> **Hint:** Understanding ARP is required to explain the LAN result. Use `ip route get 1.2.3.4` to inspect routing.
+
+---
+
+### Task Set 2 — C / libpcap & Raw Sockets
+
+#### Task 2.1A — Understanding the Sniffer
+
+Write a C sniffer that prints source and destination IP addresses for each captured packet. Answer:
+
+- **Q1.** Describe the essential sequence of library calls for a sniffer program.
+- **Q2.** Why does a sniffer require root privilege? At which call does it fail without root?
+- **Q3.** Demonstrate the difference between promiscuous mode on (`pcap_open_live(..., 1, ...)`) and off (`0`). Use `ip -d link show dev <iface>` to verify the `promiscuity` value.
+
+#### Task 2.1B — Writing Filters
+
+Write BPF filter expressions and include screenshots for:
+
+1. ICMP packets between two specific hosts.
+2. TCP packets with a destination port in the range 10–100.
+
+#### Task 2.1C — Sniffing Telnet Passwords
+
+Modify your sniffer to print the data payload of captured TCP packets. Demonstrate that you can capture a Telnet password (filter: `tcp and port 23`).
+
+#### Task 2.2A — Write a Spoofing Program
+
+Write a raw-socket C program that sends spoofed IP packets. Provide Wireshark evidence that the packets are transmitted successfully.
+
+#### Task 2.2B — Spoof an ICMP Echo Request
+
+Spoof an ICMP echo request from another machine's IP address to a live host on the Internet. Capture the echo reply in Wireshark to confirm success.
+
+**Additional Questions:**
+
+- **Q4.** Can you set the IP packet length field to an arbitrary value regardless of the actual packet size?
+- **Q5.** Do you need to manually calculate the IP header checksum when using raw sockets?
+- **Q6.** Why does using raw sockets require root? Where does the program fail without it?
+
+#### Task 2.3 — Sniff-and-then-Spoof in C
+
+Re-implement the sniff-and-then-spoof logic in C using `libpcap` and raw sockets. When pinging a real host (e.g., `8.8.8.8`) while the program runs, demonstrate that the sender receives duplicate (DUP) replies — one real and one forged.

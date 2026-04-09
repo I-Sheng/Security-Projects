@@ -246,3 +246,146 @@ With only 50 test packets the observed distribution deviates from a perfect 1/3 
 
 - `experiment/` — Lab screenshots and the exported Notion notes for all tasks above.
 - `local/` — Course lab sheet (PDF).
+
+---
+
+## Original Assignment
+
+> Source: *SEED Labs — Firewall Exploration Lab* (Wenliang Du)
+
+### Lab Environment
+
+Containers on two subnets:
+
+| Host | IP | Role |
+|---|---|---|
+| Attacker | `10.9.0.1` | Attack source |
+| Host A | `10.9.0.5` | External host |
+| Router | `10.9.0.11` / `192.168.60.11` | Routes between subnets |
+| Internal Host 1 | `192.168.60.5` | Protected server |
+| Internal Host 2 | `192.168.60.6` | Protected server |
+| Internal Host 3 | `192.168.60.7` | Protected server |
+
+---
+
+### Task 1 — Implementing a Firewall with Netfilter
+
+#### Task 1.A — Simple Kernel Module
+
+Compile and load the `hello.c` kernel module provided in the lab setup. Show that it prints `Hello World!` when loaded and `Bye-bye World!` when removed (check via `dmesg`).
+
+#### Task 1.B — Netfilter Packet Filter
+
+Using the provided `seedFilter.c` sample, complete these three sub-tasks independently:
+
+1. **Compile and verify**: Load the module and confirm it blocks UDP packets to `8.8.8.8:53`. Test with:
+   ```bash
+   dig @8.8.8.8 www.example.com
+   ```
+
+2. **Hook comparison**: Register `printInfo` on each of the five Netfilter hooks one at a time:
+   ```
+   NF_INET_PRE_ROUTING
+   NF_INET_LOCAL_IN
+   NF_INET_FORWARD
+   NF_INET_LOCAL_OUT
+   NF_INET_POST_ROUTING
+   ```
+   Use your experimental results to explain under what conditions each hook is triggered.
+
+3. **Implement `blockTelnet` and `blockICMP`**: Prevent other machines from pinging or telneting into the VM (`10.9.0.1`). Implement two separate hook functions but register them to the same Netfilter hook. Test from `10.9.0.5`:
+   ```bash
+   ping 10.9.0.1
+   telnet 10.9.0.1
+   ```
+
+> **Important:** Always unregister hooks in `removeFilter()` to avoid kernel crashes when the module is removed.
+
+---
+
+### Task 2 — Stateless `iptables` Rules
+
+#### Task 2.A — Protecting the Router
+
+Execute the following rules on the router container, then test from `10.9.0.5`:
+
+```bash
+iptables -A INPUT  -p icmp --icmp-type echo-request -j ACCEPT
+iptables -A OUTPUT -p icmp --icmp-type echo-reply   -j ACCEPT
+iptables -P OUTPUT DROP
+iptables -P INPUT  DROP
+```
+
+1. Can you ping the router?
+2. Can you telnet into the router (account: `seed`, password: `dees`)?
+
+Explain the purpose of each rule. Clean up before the next task:
+
+```bash
+iptables -F && iptables -P OUTPUT ACCEPT && iptables -P INPUT ACCEPT
+```
+
+#### Task 2.B — Protecting the Internal Network
+
+Set up `FORWARD` chain rules on the router to enforce:
+
+1. Outside hosts **cannot** ping internal hosts.
+2. Outside hosts **can** ping the router.
+3. Internal hosts **can** ping outside hosts.
+4. All other traffic between internal and external networks is blocked.
+
+Include your rules and screenshots in the report.
+
+#### Task 2.C — Protecting Internal Servers
+
+Set up rules (without connection tracking) to enforce:
+
+1. Outside hosts can only Telnet to `192.168.60.5` (port 23), not to other internal hosts.
+2. Outside hosts cannot access other internal servers.
+3. Internal hosts can access all internal servers freely.
+4. Internal hosts cannot access external servers.
+
+---
+
+### Task 3 — Connection Tracking and Stateful Firewall
+
+#### Task 3.A — Experimenting with `conntrack`
+
+Run `conntrack -L` on the router while conducting each experiment. Describe your observations and explain how long each connection state is maintained.
+
+- **ICMP**: `ping 192.168.60.5` from `10.9.0.5`
+- **UDP**: `nc -lu 9090` on `192.168.60.5`; `nc -u 192.168.60.5 9090` from `10.9.0.5`
+- **TCP**: `nc -l 9090` on `192.168.60.5`; `nc 192.168.60.5 9090` from `10.9.0.5`
+
+#### Task 3.B — Stateful Firewall Rules
+
+Rewrite the Task 2.C rules using `conntrack`, and add a rule allowing internal hosts to initiate TCP connections to any external server (which was not allowed in 2.C). Compare the two approaches:
+
+| Aspect | Stateless (Task 2.C) | Stateful (Task 3.B) |
+|---|---|---|
+| How rules work | Per-packet header matching | Connection state tracking |
+| Handling return traffic | Manual bidirectional rules | ESTABLISHED/RELATED covers it |
+| Rule complexity | Verbose, hard to maintain | Fewer, higher-level rules |
+
+---
+
+### Task 4 — Rate Limiting
+
+Run the following on the router and then `ping 192.168.60.5` from `10.9.0.5`. Conduct the experiment both with and without the second rule, and explain why the second rule is necessary:
+
+```bash
+iptables -A FORWARD -s 10.9.0.5 -m limit --limit 10/minute --limit-burst 5 -j ACCEPT
+iptables -A FORWARD -s 10.9.0.5 -j DROP
+```
+
+---
+
+### Task 5 — Load Balancing
+
+Start UDP servers on `192.168.60.5`, `.6`, and `.7` (port 8080): `nc -luk 8080`
+
+**Round-robin (nth mode):** Add three PREROUTING DNAT rules using `--mode nth --every 3 --packet N` to distribute packets equally across the three servers. Send 50 test packets and report the distribution.
+
+**Random mode:** Implement equivalent rules using `--mode random --probability P`. Explain how you chose the probability values to achieve a roughly equal split.
+
+Compare results from both modes and explain any deviation from a perfect 1/3 split.

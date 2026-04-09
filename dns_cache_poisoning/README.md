@@ -145,3 +145,116 @@ The `www.facebook.com` record is **not** cached.
 ## Conclusion
 
 Direct spoofing affects a single query; cache poisoning has lasting impact because the forged records persist until TTL expiry. However, resolvers enforce bailiwick rules — they cache authority and glue records only for zones directly related to the queried name, which limits cross-domain poisoning attempts.
+
+---
+
+## Original Assignment
+
+> Source: *SEED Labs — Local DNS Attack Lab* (Wenliang Du)
+
+### Lab Environment
+
+Four containers on `10.9.0.0/24`:
+
+| Host | IP | Role |
+|---|---|---|
+| Attacker | `10.9.0.1` | Runs sniff-and-spoof scripts |
+| User | `10.9.0.5` | Sends DNS queries |
+| Local DNS Server | `10.9.0.53` | BIND9 resolver |
+| Attacker's Nameserver | `10.9.0.153` | Hosts `attacker32.com` and fake `example.com` |
+
+The local DNS server fixes its source port to `33333` and has DNSSEC disabled for this lab. Cache commands:
+
+```bash
+rndc flush           # clear the resolver cache
+rndc dumpdb -cache   # dump cache to /var/cache/bind/dump.db
+cat /var/cache/bind/dump.db
+```
+
+### Setup Verification
+
+From the User container, verify the lab is configured correctly:
+
+```bash
+# Should return the IP from attacker32.com.zone
+dig ns.attacker32.com
+
+# Should return the official IP for www.example.com
+dig www.example.com
+
+# Should return the attacker's fake IP
+dig @ns.attacker32.com www.example.com
+```
+
+---
+
+### Task 1 — Directly Spoofing Response to User
+
+Write a program that sniffs DNS queries for `www.example.com` and immediately sends a forged DNS reply to the **user machine** before the legitimate reply arrives.
+
+- Run the program while issuing `dig www.example.com` from the user container.
+- Compare results before and after the attack.
+- Clear the local DNS cache before each test.
+
+> If the spoofed packet consistently arrives after the real reply, add network delay on the router:
+> ```bash
+> tc qdisc add dev eth0 root netem delay 100ms
+> ```
+
+---
+
+### Task 2 — DNS Cache Poisoning — Spoofing Answers
+
+Shift the target from the user to the **local DNS server**. Modify the attack program to poison the resolver's A record cache for `www.example.com`.
+
+- Flush the cache before the attack: `rndc flush`
+- After the attack, verify the cache contains the attacker's IP: `rndc dumpdb -cache && cat /var/cache/bind/dump.db`
+
+---
+
+### Task 3 — Spoofing NS Records
+
+Extend the attack to inject a forged NS record in the Authority section so that `ns.attacker32.com` becomes the cached nameserver for the entire `example.com` zone:
+
+```
+;; AUTHORITY SECTION:
+example.com.  259200  IN  NS  ns.attacker32.com.
+```
+
+- Verify the NS record appears in the DNS cache.
+- Confirm that future queries for any hostname under `example.com` resolve through the attacker's nameserver.
+
+---
+
+### Task 4 — Spoofing NS Records for Another Domain
+
+Add a second NS record to the Authority section attempting to also delegate `google.com` to the attacker's nameserver:
+
+```
+;; AUTHORITY SECTION:
+example.com.  259200  IN  NS  ns.attacker32.com.
+google.com.   259200  IN  NS  ns.attacker32.com.
+```
+
+- Check the DNS cache after the attack.
+- Describe and explain which records were cached and which were not.
+
+---
+
+### Task 5 — Spoofing Records in the Additional Section
+
+Include the following entries in the Additional section when responding to a `www.example.com` query:
+
+```
+;; AUTHORITY SECTION:
+example.com.  259200  IN  NS  ns.attacker32.com.
+example.com.  259200  IN  NS  ns.example.com.
+
+;; ADDITIONAL SECTION:
+ns.attacker32.com.  259200  IN  A  1.2.3.4
+ns.example.com.     259200  IN  A  5.6.7.8
+www.facebook.com.   259200  IN  A  3.4.5.6
+```
+
+- Report which entries are cached and which are not.
+- Explain why unrelated additional records (e.g., `www.facebook.com`) are or are not accepted.

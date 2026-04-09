@@ -146,3 +146,104 @@ DNS is treated as basic infrastructure that "just works." Designers focus on sec
 
 **Would you recommend running an in-house DNS server for an enterprise?**  
 Generally no — unless the team has strong networking and security expertise to handle patching, monitoring, and hardening (DNSSEC, query logging, rate limiting). The attack surface and operational overhead usually outweigh the benefits over using a well-managed external or dedicated DNS provider.
+
+---
+
+## Original Assignment
+
+> Source: *Lab 4 — DNS Security Lab: Attacks and Defenses*
+
+### Learning Objectives
+
+- Describe the DNS resolution process and identify security-critical steps.
+- Observe how DNS traffic can be intercepted or spoofed.
+- Explain DNS cache poisoning at a conceptual and practical level.
+- Evaluate the role of DNSSEC in securing DNS responses.
+- Identify best practices for secure DNS configuration.
+
+### Lab Environment
+
+Two VMs on the same Host-only network (Kali as client, Ubuntu as DNS server running BIND9), or the provided Docker setup with `dns-server` at `172.30.0.2` and `dns-client` at `172.30.0.3`.
+
+---
+
+### Part 1 — DNS Resolution Basics
+
+#### Task 1.1: Exploring DNS Queries
+
+```bash
+dig example.com
+dig example.com +trace
+```
+
+Answer the following:
+
+1. Which DNS servers are contacted during resolution?
+2. What information is returned in a DNS response?
+3. At which points could an attacker interfere with the process?
+
+---
+
+### Part 2 — Observing DNS Traffic and Spoofing Risk
+
+#### Task 2.1: Capturing DNS Traffic
+
+Start a packet capture, then issue a DNS query:
+
+```bash
+sudo tcpdump -n port 53
+# In another terminal:
+dig example.com
+```
+
+Answer the following:
+
+1. Is DNS using TCP or UDP by default?
+2. What fields appear in a DNS query and response?
+3. Why might DNS traffic be vulnerable to spoofing?
+
+---
+
+### Part 3 — DNS Cache Poisoning (Controlled Simulation)
+
+#### Task 3.1: Query the Local DNS Server
+
+```bash
+dig www.example-bank.com @localhost
+```
+
+Answer the following:
+
+1. Is the response what you would expect?
+2. Why is recursive DNS resolution risky if misconfigured?
+3. What security assumptions does cache poisoning break?
+
+---
+
+### Part 4 — DNSSEC as a Defense
+
+#### Task 4.1: Testing DNSSEC Validation
+
+```bash
+dig dnssec-failed.org
+dig cloudflare.com +dnssec
+```
+
+Answer the following:
+
+1. What happens when DNSSEC validation fails?
+2. How does DNSSEC change the trust model of DNS?
+3. What types of attacks does DNSSEC prevent?
+
+---
+
+### Reflection Questions
+
+1. Why is DNS an attractive target for attackers?
+2. Why is DNS security often overlooked in system design?
+3. Would you recommend running an in-house DNS server for an enterprise? Why or why not?
+
+### Deliverables
+
+- Short lab report answering all questions above.
+- Screenshots or command output demonstrating each experiment.
