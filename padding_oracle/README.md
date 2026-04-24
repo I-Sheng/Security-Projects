@@ -446,4 +446,31 @@ To compromise the key itself, a completely different class of attack would be ne
 
 ---
 
-_This document covers the padding oracle attack as demonstrated in `Program.cs` — a teaching example of how a subtle information leak in server responses can completely break encryption without ever knowing the key._
+## Sources
+
+The following references were used as the basis for the concepts explained in this document.
+
+**AES and CBC Mode**
+- NIST FIPS 197 — *Advanced Encryption Standard (AES)* — https://csrc.nist.gov/publications/detail/fips/197/final
+- NIST SP 800-38A — *Recommendation for Block Cipher Modes of Operation* — https://csrc.nist.gov/publications/detail/sp/800-38a/final
+
+**PKCS7 Padding**
+- RFC 5652 — *Cryptographic Message Syntax (CMS)*, Section 6.3 — https://www.rfc-editor.org/rfc/rfc5652#section-6.3
+
+**Padding Oracle Attack — Original Research**
+- Serge Vaudenay (2002) — *Security Flaws Induced by CBC Padding Applications to SSL, IPSEC, WTLS...* — https://www.iacr.org/cryptodb/archive/2002/EUROCRYPT/2850/2850.pdf
+
+**Real-World Attacks**
+- CVE-2010-3332 — ASP.NET Padding Oracle Vulnerability — https://www.cve.org/CVERecord?id=CVE-2010-3332
+- Thai Duong & Juliano Rizzo (2011) — *BEAST: Browser Exploit Against SSL/TLS* — https://bug665814.bmoattachments.org/attachment.cgi?id=540839
+- Bodo Möller, Thai Duong & Krzysztof Kotowicz (2014) — *This POODLE Bites: Exploiting the SSL 3.0 Fallback* — https://www.openssl.org/~bodo/ssl-poodle.pdf
+- Nadhem AlFardan & Kenneth Paterson (2013) — *Lucky Thirteen: Breaking the TLS and DTLS Record Protocols* — https://www.isg.rhul.ac.uk/tls/TLStiming.pdf
+
+---
+
+## Acknowledgement
+
+This document was written with the assistance of **Claude** (Anthropic), an AI assistant, as part of a step-by-step learning session on cryptographic attack techniques. The explanations, examples, and hex calculations were developed interactively to build understanding from first principles.
+
+The code analysed throughout this document (`Program.cs`) is a C# demonstration of the padding oracle attack for educational purposes.
+
