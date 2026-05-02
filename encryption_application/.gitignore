@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environment
+.venv/
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Poetry
+# poetry.lock is intentionally tracked — it pins exact dependency versions
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Encrypted output files produced during testing or manual use
+*.enc
+
+# OS
+.DS_Store
+Thumbs.db
