@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the design of a GUI-based encryption utility supporting AES-128, AES-256, and 3DES symmetric encryption, along with SHA-256 and SHA-512 hashing. All algorithms support **CBC-HMAC** authenticated encryption; AES additionally supports **GCM** mode. Both binary and text inputs are accepted. The utility is implemented as a desktop GUI application.
+This document describes the design of a CLI-based encryption utility supporting AES-128, AES-256, and 3DES symmetric encryption, along with SHA-256 and SHA-512 hashing. All algorithms support **CBC-HMAC** authenticated encryption; AES additionally supports **GCM** mode. Both binary and text inputs are accepted. The utility is implemented as a command-line application.
 
 ---
 
@@ -69,7 +69,7 @@ Benchmarks were run on a reference machine (Intel Core i7-12700, single-threaded
 | SHA-256 | **600,000**        | Matches NIST SP 800-132 (2023 guidance); ~570 ms on reference HW; industry-standard choice |
 | SHA-512 | **210,000**        | SHA-512 is ~1.5× slower per iteration; equivalent brute-force cost at ~295 ms              |
 
-These match the OWASP 2023 PBKDF2 recommendations. Both values are **configurable** in the application's Settings panel; the minimum enforced by the UI is 10,000 iterations to prevent accidental insecure configurations. The iteration count is stored in the output file header so decryption always uses the correct value.
+These match the OWASP 2023 PBKDF2 recommendations. Both values are **configurable** via the `--iterations` flag; no minimum is enforced by the CLI, but the defaults are calibrated for a good security/latency tradeoff. The iteration count is stored in the output file header so decryption always uses the correct value.
 
 ---
 
@@ -218,31 +218,41 @@ The metadata (magic, version, suite ID, salt, iteration count) **MAY** additiona
 
 ---
 
-## 7. GUI Application Design
+## 7. CLI Application Design
 
-The application provides the following panels:
+The application exposes three subcommands via `app.py`:
 
-**Encrypt Panel**
-- Input: file path selector or inline text area (toggleable)
-- Output: file path selector
-- Algorithm suite: drop-down (Suite ID list from Section 3)
-- Hash: SHA-256 / SHA-512 radio button
-- Key derivation: PBKDF2 / HKDF toggle (second-stage only)
-- Iterations: numeric spinner (default per Section 1, minimum 10,000)
-- Password: masked text field with confirmation
-- Encrypt button → progress bar → success/error message
+**`encrypt`**
 
-**Decrypt Panel**
-- Input: file path selector
-- Output: file path selector or display-in-app toggle
-- Password: masked text field
-- Decrypt button → HMAC verification result → decrypted output
+```
+app.py encrypt (-i FILE | -t TEXT) -o FILE [-s SUITE] [-n N] [--hkdf] [--no-meta-hmac]
+```
 
-**Settings Panel**
-- Default algorithm suite
-- Default iteration counts for SHA-256 and SHA-512
-- HKDF vs PBKDF2 second-stage selection
-- Show/hide advanced options
+- `-i FILE` / `-t TEXT` — input source (file or inline text; mutually exclusive)
+- `-o FILE` — output path for the encrypted blob (must differ from input)
+- `-s SUITE` — suite ID (hex, e.g. `0x11`) or label substring (e.g. `gcm`); defaults to `0x04`
+- `-n N` — PBKDF2 iteration count; defaults to 210,000 (SHA-512 suites) or 600,000 (SHA-256 suites)
+- `--hkdf` — use HKDF-Expand for second-stage derivation instead of PBKDF2
+- `--no-meta-hmac` — exclude the metadata header from the HMAC input
+- Password is collected interactively via `getpass` (prompted twice for confirmation); never passed as a flag
+
+**`decrypt`**
+
+```
+app.py decrypt -i FILE [-o FILE]
+```
+
+- `-i FILE` — encrypted input file
+- `-o FILE` — output path; if omitted, plaintext is written to stdout (UTF-8 text) or the raw binary stream
+- Password collected via `getpass` (single prompt)
+
+**`suites`**
+
+```
+app.py suites
+```
+
+Prints a table of all suite IDs, labels, and legacy warnings to stdout.
 
 ---
 
@@ -334,21 +344,21 @@ Results: 20/20 passed  |  0 failed  |  Total time: 8.349s
 - **Constant-time comparison** is used for HMAC verification (via `hmac.compare_digest`) to prevent timing side-channels.
 - **Random salt and IV** are generated using `os.urandom` (CSPRNG) for every encryption operation. IVs are never reused.
 - **3DES** is flagged as legacy in the UI due to its 64-bit block size (SWEET32 vulnerability) and 112-bit effective security. New data should use AES.
-- **Password is not stored** anywhere — not in memory beyond the key derivation call, not on disk. The application zeroes the password field after key derivation (best-effort; Python's GC does not guarantee prompt zeroing).
-- **No file overwrite**: the application writes encrypted output to a new path. The original plaintext is never silently destroyed.
+- **Password never on command line** — collected via `getpass` so it does not appear in shell history or process listings. Not stored on disk.
+- **No file overwrite** — encrypted output is always written to a new path. The original plaintext is never silently destroyed.
 
 ---
 
 ## 10. Dependencies
 
-| Library            | Purpose                              |
-|--------------------|--------------------------------------|
-| `cryptography`     | AES-CBC, AES-GCM, 3DES, PBKDF2, HKDF, HMAC |
-| `tkinter` or `PyQt6` | GUI framework                     |
-| `os` / `secrets`   | CSPRNG for salt and IV generation    |
-| `struct`           | Binary header serialization          |
-| `hmac`             | Constant-time MAC comparison         |
-| `pytest`           | Test runner                          |
+| Library        | Purpose                                          |
+|----------------|--------------------------------------------------|
+| `cryptography` | AES-CBC, AES-GCM, 3DES, PBKDF2, HKDF, HMAC      |
+| `argparse`     | CLI subcommand parsing (stdlib)                  |
+| `getpass`      | Interactive password prompt without echo (stdlib)|
+| `os` / `struct`| CSPRNG for salt/IV; binary header serialization (stdlib) |
+| `hmac`         | Constant-time MAC comparison (stdlib)            |
+| `pytest`       | Test runner (dev dependency)                     |
 
 ---
 

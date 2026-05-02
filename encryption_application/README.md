@@ -1,6 +1,6 @@
 # Encryption Utility
 
-A desktop GUI application for symmetric file and text encryption. Supports AES-128, AES-256, and 3DES in CBC-HMAC and GCM modes, with password-based key derivation via PBKDF2 and optional HKDF. All encrypted output is self-describing: the binary header stores the algorithm suite, salt, and iteration count so decryption requires only the password.
+A command-line tool for symmetric file and text encryption. Supports AES-128, AES-256, and 3DES in CBC-HMAC and GCM modes, with password-based key derivation via PBKDF2 and optional HKDF. All encrypted output is self-describing: the binary header stores the algorithm suite, salt, and iteration count so decryption requires only the password.
 
 ---
 
@@ -72,46 +72,74 @@ cd encryption_application
 poetry install
 ```
 
-This creates a `.venv` and installs `cryptography`, `PyQt6`, and `pytest`.
-
 ---
 
-## Running the GUI
+## Usage
 
-```bash
-poetry run python app.py
+```
+poetry run python app.py <command> [options]
 ```
 
-### Encrypt Panel
+### List cipher suites
 
-1. Choose **File** or **Text** as the input source.
-2. Select an output path (the input file is never overwritten).
-3. Pick a cipher suite from the drop-down. A deprecation warning appears for 3DES suites.
-4. Adjust the iteration count if needed (minimum 10,000 enforced).
-5. Enter and confirm the password, then click **Encrypt**.
+```bash
+poetry run python app.py suites
+```
 
-The progress bar is shown during key derivation; the UI remains responsive throughout.
+### Encrypt
 
-### Decrypt Panel
+```bash
+# Encrypt a file (default suite: AES-256-CBC/HMAC-SHA512)
+poetry run python app.py encrypt -i plaintext.txt -o plaintext.enc
 
-1. Select the `.enc` file to decrypt.
-2. Choose to save the output to a file or display it in-app (text only).
-3. Enter the password and click **Decrypt**.
+# Encrypt a text string directly
+poetry run python app.py encrypt -t "secret message" -o message.enc
+
+# Choose a specific suite by ID or label substring
+poetry run python app.py encrypt -i file.txt -o file.enc -s 0x11        # AES-256-GCM
+poetry run python app.py encrypt -i file.txt -o file.enc -s gcm         # same, by label
+
+# Override iteration count
+poetry run python app.py encrypt -i file.txt -o file.enc -n 1000000
+
+# Use HKDF for second-stage key derivation
+poetry run python app.py encrypt -i file.txt -o file.enc --hkdf
+```
+
+The password is always prompted interactively (with confirmation) — it is never passed on the command line.
+
+### Decrypt
+
+```bash
+# Decrypt to a file
+poetry run python app.py decrypt -i plaintext.enc -o plaintext.txt
+
+# Decrypt and print to stdout (text files)
+poetry run python app.py decrypt -i message.enc
+```
 
 If the password is wrong or the file has been tampered with, decryption is refused with an authentication error — no partial plaintext is exposed.
 
-### Settings Panel
+### Options reference
 
-Persistent settings for the current session:
+**`encrypt`**
 
-| Setting | Description |
-|---------|-------------|
-| Default suite | Pre-selects the suite in the Encrypt tab |
-| SHA-256 / SHA-512 iterations | Used when a new encryption is started |
-| 2nd-stage derivation | PBKDF2 (default) or HKDF |
-| Metadata in HMAC | Include algorithm header in MAC input (recommended on) |
+| Flag | Description |
+|------|-------------|
+| `-i FILE` / `--input FILE` | Input file to encrypt (mutually exclusive with `--text`) |
+| `-t TEXT` / `--text TEXT` | Input text to encrypt (mutually exclusive with `--input`) |
+| `-o FILE` / `--output FILE` | Output encrypted file (required) |
+| `-s SUITE` / `--suite SUITE` | Suite ID (hex) or label substring (default: `0x04`) |
+| `-n N` / `--iterations N` | PBKDF2 iteration count (default: suite-dependent) |
+| `--hkdf` | Use HKDF for second-stage key derivation |
+| `--no-meta-hmac` | Exclude metadata from HMAC input |
 
-Click **Apply Settings** to commit changes.
+**`decrypt`**
+
+| Flag | Description |
+|------|-------------|
+| `-i FILE` / `--input FILE` | Input encrypted file (required) |
+| `-o FILE` / `--output FILE` | Output file (default: print plaintext to stdout) |
 
 ---
 
@@ -159,8 +187,8 @@ poetry run pytest tests/ -v -s
 
 ```
 encryption_application/
-├── crypto.py                  # All cryptographic operations (no GUI dependency)
-├── app.py                     # PyQt6 GUI — Encrypt / Decrypt / Settings tabs
+├── crypto.py                  # All cryptographic operations
+├── app.py                     # CLI entry point (encrypt / decrypt / suites)
 ├── tests/
 │   ├── conftest.py
 │   ├── test_unit.py           # U-01..U-15
@@ -169,7 +197,7 @@ encryption_application/
 └── pyproject.toml
 ```
 
-`crypto.py` has no GUI dependency and can be imported directly for scripted use:
+`crypto.py` can also be imported directly for scripted use:
 
 ```python
 from crypto import encrypt, decrypt, HMACVerificationError
@@ -186,6 +214,7 @@ plaintext = decrypt(blob, b"my-password")
 - **Constant-time comparison** — `hmac.compare_digest` prevents timing side-channels.
 - **Random salt and IV** — generated with `os.urandom` (CSPRNG) per encryption; never reused.
 - **No file overwrite** — encrypted output is always written to a new path.
+- **Password never on command line** — always collected via `getpass` (no shell history exposure).
 - **3DES** — included for legacy interoperability only. Its 64-bit block size makes it vulnerable to SWEET32 at ~68 GB of traffic, and its effective security is ~112 bits. Prefer AES for all new data.
 
 ---
@@ -195,5 +224,4 @@ plaintext = decrypt(blob, b"my-password")
 | Package        | Purpose                                          |
 |----------------|--------------------------------------------------|
 | `cryptography` | AES-CBC, AES-GCM, 3DES, PBKDF2, HKDF, HMAC      |
-| `PyQt6`        | Desktop GUI                                      |
 | `pytest`       | Test runner (dev dependency)                     |

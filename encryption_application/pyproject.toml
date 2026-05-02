@@ -1,14 +1,13 @@
 [tool.poetry]
 name = "encryption-utility"
 version = "0.1.0"
-description = "GUI encryption utility with AES/3DES/GCM"
+description = "CLI encryption utility with AES/3DES/GCM"
 authors = ["isheng"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
 cryptography = "^47.0.0"
-pyqt6 = "^6.11.0"
 
 
 [tool.poetry.group.dev.dependencies]
