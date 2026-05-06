@@ -185,7 +185,7 @@ def encrypt(
     ciphertext = _cbc_encrypt(plaintext, ke, iv, p["cipher"])
     hmac_prefix = meta if include_metadata_in_hmac else b""
     mac = _hmac_compute(kh, hmac_prefix + iv + ciphertext, p["hash"])
-    return meta + iv_block + struct.pack(">Q", len(ciphertext)) + ciphertext + mac
+    return meta + mac + iv_block + struct.pack(">Q", len(ciphertext)) + ciphertext
 
 
 def decrypt(data: bytes, password: bytes) -> bytes:
@@ -200,16 +200,20 @@ def decrypt(data: bytes, password: bytes) -> bytes:
     if suite_id not in SUITE_PARAMS:
         raise ValueError(f"Unknown suite ID 0x{suite_id:02X}")
 
+    p            = SUITE_PARAMS[suite_id]
+    use_hkdf     = bool(version & FLAG_HKDF)
+    include_meta = bool(version & FLAG_META_HMAC)
+
     off = 7
     salt       = data[off: off + salt_len]; off += salt_len
     iterations = struct.unpack(">I", data[off: off + 4])[0]; off += 4
-    iv_len     = data[off]; off += 1
-    iv         = data[off: off + iv_len]; off += iv_len
-    ct_len     = struct.unpack(">Q", data[off: off + 8])[0]; off += 8
 
-    p           = SUITE_PARAMS[suite_id]
-    use_hkdf    = bool(version & FLAG_HKDF)
-    include_meta = bool(version & FLAG_META_HMAC)
+    if p["mode"] != "GCM":
+        mac_stored = data[off: off + p["kh_len"]]; off += p["kh_len"]
+
+    iv_len = data[off]; off += 1
+    iv     = data[off: off + iv_len]; off += iv_len
+    ct_len = struct.unpack(">Q", data[off: off + 8])[0]; off += 8
 
     ke, kh = derive_keys(password, salt, iterations, suite_id, use_hkdf)
 
@@ -221,7 +225,6 @@ def decrypt(data: bytes, password: bytes) -> bytes:
             raise HMACVerificationError("GCM authentication tag verification failed")
 
     ciphertext = data[off: off + ct_len]
-    mac_stored = data[off + ct_len:]
 
     # Reconstruct exact metadata bytes from the raw file header
     meta = data[: 7 + salt_len + 4]   # magic+ver+suite+salt_len+salt+iterations

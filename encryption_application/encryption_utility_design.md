@@ -142,19 +142,19 @@ The HMAC key should be at least as long as the hash's output to avoid loss of en
 For **CBC-HMAC** output:
 
 ```
-Offset   Length      Field
-------   ------      -----
-0        4 bytes     Magic: 0x45 0x4E 0x43 0x52  ("ENCR")
-4        1 byte      Version: 0x01
-5        1 byte      Suite ID (see table above)
-6        1 byte      Salt length N (bytes)
-7        N bytes     Salt (random, N = 16 recommended)
-7+N      4 bytes     Iteration count (big-endian uint32)
-11+N     1 byte      IV length M (bytes)
-12+N     M bytes     IV (random; 16 bytes for AES-CBC, 8 bytes for 3DES-CBC)
-12+N+M   8 bytes     Ciphertext length L (big-endian uint64)
-20+N+M   L bytes     Ciphertext
-20+N+M+L 32/64 bytes HMAC (length depends on hash; 32 for SHA-256, 64 for SHA-512)
+Offset     Length      Field
+------     ------      -----
+0          4 bytes     Magic: 0x45 0x4E 0x43 0x52  ("ENCR")
+4          1 byte      Version: 0x01
+5          1 byte      Suite ID (see table above)
+6          1 byte      Salt length N (bytes)
+7          N bytes     Salt (random, N = 16 recommended)
+7+N        4 bytes     Iteration count (big-endian uint32)
+11+N       H bytes     HMAC (32 bytes for SHA-256, 64 bytes for SHA-512)
+11+N+H     1 byte      IV length M (bytes)
+12+N+H     M bytes     IV (random; 16 bytes for AES-CBC, 8 bytes for 3DES-CBC)
+12+N+H+M   8 bytes     Ciphertext length L (big-endian uint64)
+20+N+H+M   L bytes     Ciphertext
 ```
 
 For **AES-GCM** output:
@@ -181,7 +181,7 @@ Offset   Length      Field
 3. **Salt and iteration count before IV** — all inputs to PBKDF2 are grouped together. A parser can derive keys immediately after reading this block without skipping forward.
 4. **IV before ciphertext** — IV is needed first to initialize the cipher; keeping it adjacent to ciphertext reduces seeks on streaming reads.
 5. **Ciphertext length field** — without this, a parser must infer ciphertext length from (file size − fixed header size), which becomes fragile if the format is ever extended. An explicit length field is unambiguous.
-6. **HMAC last (CBC mode)** — HMAC covers the IV and the full ciphertext (and optionally the metadata header). Appending it after the ciphertext allows the entire file to be written in a single forward pass during encryption. During decryption, the HMAC is read last, but the verify-before-decrypt requirement is still satisfied: the decryptor reads the full ciphertext into memory, verifies the HMAC, and only then performs decryption.
+6. **HMAC before IV (CBC mode)** — HMAC covers the IV and the full ciphertext (and optionally the metadata header). Placing it immediately after the key-derivation fields groups all authentication material before the payload, making the authenticate-then-decrypt flow explicit in the layout: a parser encounters the HMAC, derives keys, verifies, and only then reads the IV and ciphertext. The full ciphertext is buffered in memory during encryption before the HMAC is prepended.
 7. **GCM auth tag embedded in ciphertext block** — this is the convention used by most GCM implementations (e.g., OpenSSL, Python `cryptography`). It simplifies parsing since only one length field is needed.
 
 ### HMAC Coverage
@@ -210,9 +210,9 @@ The metadata (magic, version, suite ID, salt, iteration count) **MAY** additiona
 
 ### Decryption
 
-1. Parse the header to read salt, iteration count, suite ID, and IV.
+1. Parse the header to read salt, iteration count, and suite ID. For CBC suites, read the HMAC next (before the IV).
 2. Derive Km, Ke, and Kh.
-3. For CBC-HMAC: read the full ciphertext and HMAC from the file. **Verify the HMAC first.** Decryption proceeds **only** if the HMAC is valid (constant-time comparison). This prevents padding-oracle and other chosen-ciphertext attacks.
+3. For CBC-HMAC: read the IV and full ciphertext. **Verify the HMAC first.** Decryption proceeds **only** if the HMAC is valid (constant-time comparison). This prevents padding-oracle and other chosen-ciphertext attacks.
 4. For GCM: the `decrypt` operation itself verifies the authentication tag atomically; decrypted plaintext is not returned until the tag passes.
 5. Write or display the plaintext.
 

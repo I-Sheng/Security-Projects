@@ -42,21 +42,41 @@ Default iteration counts (OWASP 2023 / NIST SP 800-132):
 
 ### Binary Output Format
 
-Every encrypted file begins with the magic bytes `ENCR` followed by a self-describing header:
+Every encrypted file begins with the magic bytes `ENCR` followed by a self-describing header.
+
+**CBC-HMAC suites** (`0x01`–`0x06`):
 
 ```
-Offset     Field
-------     -----
-0          Magic: "ENCR" (4 bytes)
-4          Version byte  (flags: bit 7 = metadata in HMAC, bit 6 = HKDF)
-5          Suite ID
-6          Salt length N
-7          Salt (N bytes, random)
-7+N        Iteration count (big-endian uint32)
-11+N       IV length M
-12+N       IV (M bytes, random)
-12+N+M     Ciphertext length (big-endian uint64)
-20+N+M     Ciphertext  [CBC: followed by HMAC | GCM: tag appended in-band]
+Offset         Field
+------         -----
+0              Magic: "ENCR" (4 bytes)
+4              Version byte  (flags: bit 7 = metadata in HMAC, bit 6 = HKDF)
+5              Suite ID
+6              Salt length N
+7              Salt (N bytes, random)
+7+N            Iteration count (big-endian uint32)
+11+N           HMAC (H bytes: 32 for SHA-256, 64 for SHA-512)
+11+N+H         IV length M
+12+N+H         IV (M bytes, random)
+12+N+H+M       Ciphertext length (big-endian uint64)
+20+N+H+M       Ciphertext
+```
+
+**AES-GCM suites** (`0x10`–`0x11`):
+
+```
+Offset         Field
+------         -----
+0              Magic: "ENCR" (4 bytes)
+4              Version byte  (flags: bit 7 = metadata in HMAC, bit 6 = HKDF)
+5              Suite ID
+6              Salt length N
+7              Salt (N bytes, random)
+7+N            Iteration count (big-endian uint32)
+11+N           IV/Nonce length M (12 bytes for GCM)
+12+N           IV/Nonce (M bytes, random)
+12+N+M         Ciphertext + tag length (big-endian uint64)
+20+N+M         Ciphertext || GCM auth tag (tag appended as last 16 bytes)
 ```
 
 The HMAC (CBC mode) covers `[metadata header ||] IV || Ciphertext` and is verified with a constant-time comparison before any decryption takes place — preventing padding-oracle attacks.

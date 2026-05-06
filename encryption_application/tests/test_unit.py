@@ -113,9 +113,9 @@ def test_u07_tampered_ciphertext_rejected():
 
 def test_u08_tampered_iv_rejected():
     blob = bytearray(encrypt(b"secret message", _PW, suite_id=0x04, iterations=_FAST_ITERS))
-    # Locate the IV: offset = 7 + SALT_LEN(16) + 4(iter) + 1(iv_len) = 28
-    # IV starts at byte 28, length 16
-    blob[28] ^= 0x01
+    # Locate the IV: offset = 7 + SALT_LEN(16) + 4(iter) + kh_len(64 for SHA-512) + 1(iv_len) = 92
+    # IV starts at byte 92, length 16
+    blob[92] ^= 0x01
     with pytest.raises(HMACVerificationError):
         decrypt(bytes(blob), _PW)
 
