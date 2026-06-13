@@ -26,7 +26,6 @@ An optional HKDF second stage is available for faster derivation when maximum co
 |----------|------------------------------|------|-------------|------------------------------|
 | `0x01`   | AES-128                      | CBC  | HMAC-SHA256 |                              |
 | `0x02`   | AES-128                      | CBC  | HMAC-SHA512 |                              |
-| `0x03`   | AES-256                      | CBC  | HMAC-SHA256 |                              |
 | `0x04`   | AES-256                      | CBC  | HMAC-SHA512 | **Default**                  |
 | `0x05`   | 3DES (168-bit)               | CBC  | HMAC-SHA256 | Legacy — deprecation warning |
 | `0x06`   | 3DES (168-bit)               | CBC  | HMAC-SHA512 | Legacy — deprecation warning |
@@ -116,7 +115,7 @@ poetry run python app.py encrypt -i plaintext.txt -o plaintext.enc
 poetry run python app.py encrypt -t "secret message" -o message.enc
 
 # Choose a specific suite by ID or label substring
-poetry run python app.py encrypt -i file.txt -o file.enc -s 0x11        # AES-256-GCM
+poetry run python app.py encrypt -i file.txt -o file.enc -s 0x11        # AES-256-GCM / SHA-512
 poetry run python app.py encrypt -i file.txt -o file.enc -s gcm         # same, by label
 
 # Override iteration count

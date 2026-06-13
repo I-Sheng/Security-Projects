@@ -34,11 +34,6 @@ SUITE_PARAMS: dict[int, dict] = {
         "cipher": "AES-128", "mode": "CBC", "hash": "SHA-512",
         "km_len": 64, "ke_len": 16, "kh_len": 64, "iv_len": 16, "legacy": False,
     },
-    0x03: {
-        "label": "AES-256-CBC / HMAC-SHA256",
-        "cipher": "AES-256", "mode": "CBC", "hash": "SHA-256",
-        "km_len": 32, "ke_len": 32, "kh_len": 32, "iv_len": 16, "legacy": False,
-    },
     0x04: {
         "label": "AES-256-CBC / HMAC-SHA512 [default]",
         "cipher": "AES-256", "mode": "CBC", "hash": "SHA-512",
@@ -60,8 +55,8 @@ SUITE_PARAMS: dict[int, dict] = {
         "km_len": 32, "ke_len": 16, "kh_len": 0, "iv_len": 12, "legacy": False,
     },
     0x11: {
-        "label": "AES-256-GCM [recommended]",
-        "cipher": "AES-256", "mode": "GCM", "hash": "SHA-256",
+        "label": "AES-256-GCM / SHA-512 [recommended]",
+        "cipher": "AES-256", "mode": "GCM", "hash": "SHA-512",
         "km_len": 32, "ke_len": 32, "kh_len": 0, "iv_len": 12, "legacy": False,
     },
 }

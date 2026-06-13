@@ -51,7 +51,6 @@ def test_u01_key_derivation_sha512():
 
 @pytest.mark.parametrize("suite_id, label", [
     (0x01, "AES-128-CBC/HMAC-SHA256"),
-    (0x03, "AES-256-CBC/HMAC-SHA256"),
     (0x04, "AES-256-CBC/HMAC-SHA512"),
     (0x05, "3DES-CBC/HMAC-SHA256"),
     (0x10, "AES-128-GCM"),
@@ -73,7 +72,7 @@ def test_u02_aes128_cbc():
 # U-03
 def test_u03_aes256_cbc():
     pt = b"AES-256-CBC plaintext"
-    assert decrypt(encrypt(pt, _PW, suite_id=0x03, iterations=_FAST_ITERS), _PW) == pt
+    assert decrypt(encrypt(pt, _PW, suite_id=0x04, iterations=_FAST_ITERS), _PW) == pt
 
 
 # U-04
@@ -203,7 +202,7 @@ def test_u14_wrong_password_gcm():
 # ---------------------------------------------------------------------------
 
 def test_u15_all_suites_distinct():
-    CBC_SUITES = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06]
+    CBC_SUITES = [0x01, 0x02, 0x04, 0x05, 0x06]
     plaintext = b"same plaintext for all suites"
     outputs = [
         encrypt(plaintext, _PW, suite_id=sid, iterations=_FAST_ITERS)

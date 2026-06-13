@@ -83,7 +83,6 @@ Only hash/cipher pairings that provide at least 128 bits of security are permitt
 |----------|--------------|------|------------|--------------------------------------|
 | `0x01`   | AES-128      | CBC  | HMAC-SHA256 | 128-bit encryption, 128-bit auth     |
 | `0x02`   | AES-128      | CBC  | HMAC-SHA512 | Stronger authentication              |
-| `0x03`   | AES-256      | CBC  | HMAC-SHA256 | 256-bit encryption, 128-bit auth     |
 | `0x04`   | AES-256      | CBC  | HMAC-SHA512 | **Recommended default**              |
 | `0x05`   | 3DES (168-bit)| CBC | HMAC-SHA256 | Legacy compatibility only            |
 | `0x06`   | 3DES (168-bit)| CBC | HMAC-SHA512 | Legacy compatibility only            |
